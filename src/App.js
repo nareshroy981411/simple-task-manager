@@ -3,12 +3,15 @@ import "./App.css";
 
 function App() {
   const [tasks, setTasks] = useState([]);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [priority, setPriority] = useState("High");
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    dueDate: "",
+    priority: "High",
+  });
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterPriority, setFilterPriority] = useState("All"); 
+  const [filterPriority, setFilterPriority] = useState("All");
+  const [editingTaskId, setEditingTaskId] = useState(null);
 
   useEffect(() => {
     const savedTasks = JSON.parse(localStorage.getItem("tasks")) || [];
@@ -19,25 +22,55 @@ function App() {
     localStorage.setItem("tasks", JSON.stringify(tasks));
   }, [tasks]);
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
   const addTask = () => {
-    if (!title || !description || !dueDate) return;
+    if (!formData.title || !formData.description || !formData.dueDate) return;
     const newTask = {
       id: Date.now(),
-      title,
-      description,
-      dueDate,
-      priority,
+      ...formData,
     };
     setTasks([...tasks, newTask]);
-    setTitle("");
-    setDescription("");
-    setDueDate("");
-    setPriority("High");
+    setFormData({
+      title: "",
+      description: "",
+      dueDate: "",
+      priority: "High",
+    });
   };
 
   const deleteTask = (id) => {
     const updatedTasks = tasks.filter((task) => task.id !== id);
     setTasks(updatedTasks);
+  };
+
+  const editTask = (task) => {
+    setEditingTaskId(task.id);
+    setFormData(task);
+  };
+
+  const updateTask = () => {
+    const updatedTasks = tasks.map((task) =>
+      task.id === editingTaskId ? { ...formData } : task
+    );
+    setTasks(updatedTasks);
+    setEditingTaskId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingTaskId(null);
+    setFormData({
+      title: "",
+      description: "",
+      dueDate: "",
+      priority: "High",
+    });
   };
 
   const filteredTasks = tasks.filter((task) => {
@@ -55,27 +88,41 @@ function App() {
       <div className="taskForm">
         <input
           type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          name="title"
+          value={formData.title}
+          onChange={handleChange}
           placeholder="Title"
         />
         <input
           type="text"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
           placeholder="Description"
         />
         <input
           type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
+          name="dueDate"
+          value={formData.dueDate}
+          onChange={handleChange}
         />
-        <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+        <select
+          name="priority"
+          value={formData.priority}
+          onChange={handleChange}
+        >
           <option value="High">High</option>
           <option value="Medium">Medium</option>
           <option value="Low">Low</option>
         </select>
-        <button onClick={addTask}>Add Task</button>
+        {editingTaskId ? (
+          <>
+            <button onClick={updateTask}>Update</button>
+            <button onClick={cancelEdit}>Cancel</button>
+          </>
+        ) : (
+          <button onClick={addTask}>Add Task</button>
+        )}
       </div>
       <div className="filterForm">
         <input
@@ -101,7 +148,17 @@ function App() {
             <p>{task.description}</p>
             <p>Due Date: {task.dueDate}</p>
             <p>Priority: {task.priority}</p>
-            <button onClick={() => deleteTask(task.id)}>Delete</button>
+            {editingTaskId === task.id ? (
+              <>
+                <button onClick={updateTask}>Save</button>{" "}
+                <button onClick={cancelEdit}>Cancel</button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => editTask(task)}>Edit</button>{" "}
+                <button onClick={() => deleteTask(task.id)}>Delete</button>
+              </>
+            )}
           </div>
         ))}
       </div>
